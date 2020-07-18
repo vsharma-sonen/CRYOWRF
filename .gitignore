@@ -1,0 +1,4 @@
+
+# ignore everything inside snow_libs
+
+snow_libs/

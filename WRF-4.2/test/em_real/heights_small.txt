@@ -1,0 +1,2 @@
++:h:24:HFX,TSK,sn_qs,M_BUDG_PREC,QFX,SEAICE,SST
++:h:12:snpack_T,sn_volI,sn_thick
