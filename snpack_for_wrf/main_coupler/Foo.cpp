@@ -359,10 +359,7 @@ inline bool readSlopeMeta(mio::IOManager& io, SnowpackIO& snowpackio, SnowpackCo
 	stringstream ss;
 	ss << "SNOWFILE" << i_stn+1;
 	cfg.getValue(ss.str(), "Input", snowfile, mio::IOUtils::nothrow);
-        //std::cout << "snow file:\t" << snowfile << std::endl;
 
-	//Read SSdata for every "slope" referred to as sector where sector 0 corresponds to the main station
-//	for (size_t sector=slope.mainStation; sector<slope.nSlopes; sector++) {
                 size_t sector = 0;
 		try {
 			if (sector == slope.mainStation) {
@@ -375,7 +372,6 @@ inline bool readSlopeMeta(mio::IOManager& io, SnowpackIO& snowpackio, SnowpackCo
 						((pos_dot != string::npos) && (pos_slash == string::npos))) //so that the dot is not in a directory name
 						snowfile.erase(pos_dot, snowfile.size()-pos_dot);
 				}
-//                                std::cout << "snowfile: " << snowfile << " ,stationid: " << vecStationIDs[i_stn] << std::endl;
  
 				snowpackio.readSnowCover(snowfile, vecStationIDs[i_stn], vecSSdata, sn_Zdata, (vecXdata.Seaice!=NULL));
                                 vecSSdata.meta.position.setLatLon((double) 40.5,(double) 40.5,(double) 4000.0);
@@ -386,11 +382,9 @@ inline bool readSlopeMeta(mio::IOManager& io, SnowpackIO& snowpackio, SnowpackCo
 				vector<mio::MeteoData> vectmpmd;
 				if (current_date.isUndef()) //either force the start date or take it from the sno file
                                   { current_date = Date::rnd(vecSSdata.profileDate, 1);
-                                    //cout << " I AM HERE " << endl;
                                       }
 				else
 				{	
-                                    //vecSSdata.profileDate = current_date;
                                     }
 				io.getMeteoData(Date::rnd(vecSSdata.profileDate,1), vectmpmd);
                                 vecSSdata.profileDate = current_date;
@@ -411,21 +405,6 @@ inline bool readSlopeMeta(mio::IOManager& io, SnowpackIO& snowpackio, SnowpackCo
 				if (!current_date.isUndef()) vecSSdata.profileDate = current_date; //this should have been set when processing the main station
 			}
                                 vecSSdata.meta.position.setLatLon(Lat,Lon,Altitude);
-                        //        for(std::size_t i=0 ; i < vecSSdata.Ldata.size(); i++)
-                        //        {  double fac;
-                        //           if( i < 30 )
-                        //           {
-                        //             fac = i/30.0 ;
-                        //              }
-                        //           else
-                        //           {
-                        //             fac = 1.0;
-                        //             }
-                        //           vecSSdata.Ldata[i].tl = sn_tsk *(1.0-fac) + (fac)*vecSSdata.Ldata[i].tl ;
-                        //           }
-
-
-
 
 			        vecXdata.initialize(vecSSdata,0); // Generate the corresponding Xdata
 		} catch (const exception& e) {
@@ -648,19 +627,10 @@ int SnowpackInterface::init_sn(int snpack_layers_to_save,double Lat,double Lon,d
 
    start_data << yr << "-" << month << "-" << day << "T" << hour << ":" << minute ;
 
-//   std::cout << "Starting date is:\t" <<  start_data.str() << std::endl ;
-//   std::cout << "BEFORE: This is date begin:\t" << dateBegin.getJulian() << std::endl;
-//   std::cout << "BEFORE: This is date end:\t"   << dateEnd.getJulian()   << std::endl;
- 
-
    mio::IOUtils::convertString(dateBegin, start_data.str() , i_time_zone);
    mio::IOUtils::convertString(dateEnd  , "2100-02-15T00:00" , i_time_zone);
 
    current_date = dateBegin;
-
-//   std::cout << "END: This is date begin:\t" << dateBegin.getJulian() << "\t"  << current_date.getJulian() << "\t" << dateEnd.getJulian() << std::endl;
-//   std::cout << "END: This is date end:\t"   << dateEnd.getJulian()   << std::endl;
-
 
         const std::string l_variant            = cfg.get("VARIANT", "SnowpackAdvanced"); variant = l_variant;
         const std::string l_experiment         = cfg.get("EXPERIMENT", "Output"); experiment = l_experiment;
@@ -698,30 +668,21 @@ int SnowpackInterface::init_sn(int snpack_layers_to_save,double Lat,double Lon,d
         const bool l_soil_flux = (useSoilLayers || variant == "SEAICE") ? cfg.get("SOIL_FLUX", "Snowpack") : false;
                    soil_flux = l_soil_flux;
 
-        //snowpackio = new SnowpackIO(cfg);
-        //io         = new mio::IOManager(cfg);
         io.setMinBufferRequirements(IOUtils::nodata, 50.0); //we require the buffer to contain at least 1.1 day before the current point
 
         if (vecStationIDs.empty()) { //research use case: stationIDs provided by the available input files
                 vector<StationData> accessible_stations;
                 io.getStationData(dateEnd, accessible_stations); //we are retrieving meta information from MeteoIO
                 for (size_t ii=0; ii<accessible_stations.size(); ii++) {
-//                     std::cout << "check ss_station:\t" << ss_station.str() << std::endl ;
-                       // vecStationIDs.push_back( accessible_stations[ii].getStationID() ); //HACK: accessible_stations should be directly used
                      vecStationIDs.push_back(ss_station.str());
                 }
         }
 
-        //now, let's start!
-        //printStartInfo(*cfg, string(argv[0]));
 
  // START LOOP OVER ALL STATIONS
         bool write_forcing = cfg.get("WRITE_PROCESSED_METEO", "Output"); //it will be set to false once it has been done
-//      for (size_t i_stn=0; i_stn<vecStationIDs.size(); i_stn++) {
             size_t i_stn = 0;
 
-                //cout << endl;
-                //prn_msg(__FILE__, __LINE__, "msg-", mio::Date(), "Run on meteo station %s", vecStationIDs[i_stn].c_str());
                 run_timer.reset();
                 meteoRead_timer.reset();
 
@@ -743,8 +704,6 @@ int SnowpackInterface::init_sn(int snpack_layers_to_save,double Lat,double Lon,d
 		  int nLayers = std::min(snpack_nlayers,loc_snpack_lay_to_sav);
 	          vecSSdata.nLayers = nLayers;	  
                   if(vecSSdata.nLayers > 0) vecSSdata.Ldata.resize(vecSSdata.nLayers, LayerData());
-                 // const nr_of_solutes = 0;
-                  std::cout << "Number of layers:\t" << vecSSdata.nLayers << std::endl;
                   for(size_t ll=0; ll<vecSSdata.nLayers; ll++){
 	              vecSSdata.Ldata[ll].depositionDate    = mio::Date(arr_depd[nLayers-1-ll],i_time_zone); 
                       vecSSdata.Ldata[ll].hl                = arr_thick[nLayers-1-ll]; 
@@ -780,7 +739,6 @@ int SnowpackInterface::init_sn(int snpack_layers_to_save,double Lat,double Lon,d
 			              }
                   vecSSdata.meta.position.setLatLon(Lat,Lon,Altitude);
 		  vecXdata.initialize(vecSSdata,0);
-		  //slope.nSlopes = 1;
 		} // if..else for if starting with file data (*.sno) or WRF data
 		
 		meteoRead_timer.stop();
@@ -788,8 +746,6 @@ int SnowpackInterface::init_sn(int snpack_layers_to_save,double Lat,double Lon,d
                 memset(&mn_ctrl, 0, sizeof(MainControl));
                 if (mode == "RESEARCH") {
                         mn_ctrl.resFirstDump = true; //HACK to dump the initial state in research mode
-//                        deleteOldOutputFiles(outpath, experiment, vecStationIDs[i_stn], slope->nSlopes, snowpackio->getExtensions());
-                        //cfg.write(outpath + "/" + vecStationIDs[i_stn] + "_" + experiment + ".ini"); //output config
                         current_date -= calculation_step_length/(24.*60.);
                 }
 
@@ -815,23 +771,9 @@ int SnowpackInterface::init_sn(int snpack_layers_to_save,double Lat,double Lon,d
 
              vecXdata.meta.stationID = ss_station.str();
 
-//             std::cout << "write data to:\t" << vecXdata.meta.getStationID().c_str() << std::endl;
-
              counter = 0;
 
              vecXdata.meta.position.setGridIndex(I,J,(int)0);
-
-                                if ((I==60) && (J==22)){
-                                size_t nene = vecXdata.getNumberOfElements();
-				for (size_t kk = 0; kk < nene ; kk++)
-				{
-
-					std::cout << "GRID ID:\t" << grid_id <<"\tINIT STN DATA:\t" << vecXdata.Edata[kk].Te << ","
-					 << vecXdata.Edata[kk].L << ","
-					 << vecXdata.Ndata[kk].T << std::endl;
-				 }
-                              }
-
 
 std::cout << "I,J,H:\t" << I << " , " << J << " , " << write_counter << " , " << compute_counter << std::endl;
 SNOWH = vecXdata.cH;
@@ -948,11 +890,9 @@ int SnowpackInterface::nextStep(int xxx,double h_of_met_vals, double l_TA, doubl
     // START LOOP OVER ASPECTS
     unsigned int slope_sequence=0;
     double tot_mass_in = 0.; // To check mass balance over one CALCULATION_STEP_LENGTH if MASS_BALANCE is set
-    //SnowpackConfig tmpcfg(cfg);
 
     //fill Snowpack internal structure with forcing data
     copyMeteoData(vecMyMeteo, Mdata, slope.prevailing_wind_dir, wind_scaling_factor);
-    //Mdata.copySnowTemperatures(vecMyMeteo, slope_sequence);
     slope.setSlope(slope_sequence, vecXdata, Mdata.dw_drift);
     dataForCurrentTimeStep(Mdata, surfFluxes, vecXdata, slope, cfg,
            cumsum.precip, lw_in, hs_a3hl6,
@@ -984,7 +924,6 @@ int SnowpackInterface::nextStep(int xxx,double h_of_met_vals, double l_TA, doubl
           if(vecXdata.cH < 0.5){
            drift = 0.0;
              }         
-//          std::cout << "density:\t" << Mdata.density_air << std::endl; 
           double ustar_thresh = sqrt(vecXdata.tau_thresh / Mdata.density_air ); // [m s-1]
           double upart = 2.8 * ustar_thresh ; // [ m s-1]
           double conc = drift/upart ; // [kg m-2]
@@ -1075,17 +1014,12 @@ in_conc  = conc;
          } // end of if statement for no snow
 
 
-//Mdata.vw = VW_final     ;
-//Mdata.vw_max = VW_final ;
-
 surfFluxes.mass[SurfaceFluxes::MS_HNW] = Mdata.psum;
 
 surfFluxes.reset(cumsum_mass);
 cumsum.precip += l_psum;
                              if( (counter % compute_counter) == 0) {
-//                                Snowpack snowpack(tmpcfg); //the snowpack model to use
                                 snowpack->runSnowpackModel(Mdata, vecXdata, cumsum.precip, sn_Bdata, surfFluxes);
-                                //snowpack.runSnowpackModel(Mdata, vecXdata, cumsum.precip, sn_Bdata, surfFluxes);
                                 cumsum.precip = 0.0;
                                 Mdata.psum    = 0.0;
                                 }
