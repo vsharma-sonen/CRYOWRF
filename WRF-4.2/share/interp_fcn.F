@@ -1039,14 +1039,232 @@ END MODULE module_interp_info
            ck = nk
            DO ni = nits, nite
               if ( imask ( ni, nj ) .eq. 1 ) then
-                ci = ipos + (ni-1) / nri      ! i coord of CD point 
+                ci = ipos + (ni-1) / nri      ! i coord of CD point
                 nfld( ni, nk, nj ) = cfld( ci , ck , cj )
+                if ( (ni .eq. 28) .and. (nj .eq. 42) ) then
+                   write(*,*) 'nfld(28,:,42) :',nk,nfld(28,nk,42),ci,cj
+                endif
               endif
            ENDDO
         ENDDO
      ENDDO
 
    END SUBROUTINE interp_fcn_nn
+
+!=========================================================================
+
+!  Nearest neighbor interpolation for snowpacks (for reals)
+
+   SUBROUTINE interp_fcn_nn_snpack ( cfld,                                 &  ! CD field
+                           cids, cide, ckds, ckde, cjds, cjde,   &
+                           cims, cime, ckms, ckme, cjms, cjme,   &
+                           cits, cite, ckts, ckte, cjts, cjte,   &
+                           nfld,                                 &  ! ND field
+                           nids, nide, nkds, nkde, njds, njde,   &
+                           nims, nime, nkms, nkme, njms, njme,   &
+                           nits, nite, nkts, nkte, njts, njte,   &
+                           shw,                                  &  ! stencil half width for interp
+                           imask,                                &  ! interpolation mask
+                           xstag, ystag,                         &  ! staggering of field
+                           ipos, jpos,                           &  ! Position of lower left of nest in CD
+                           nri, nrj,coarse_xice,nest_xice,       &
+                           coarse_xland,nest_xland    )   ! nest ratios
+     IMPLICIT NONE
+
+     INTEGER, INTENT(IN) :: cids, cide, ckds, ckde, cjds, cjde,   &
+                            cims, cime, ckms, ckme, cjms, cjme,   &
+                            cits, cite, ckts, ckte, cjts, cjte,   &
+                            nids, nide, nkds, nkde, njds, njde,   &
+                            nims, nime, nkms, nkme, njms, njme,   &
+                            nits, nite, nkts, nkte, njts, njte,   &
+                            shw,                                  &
+                            ipos, jpos,                           &
+                            nri, nrj
+     LOGICAL, INTENT(IN) :: xstag, ystag
+
+     REAL, DIMENSION ( cims:cime, ckms:ckme, cjms:cjme ) :: cfld
+     REAL, DIMENSION ( nims:nime, nkms:nkme, njms:njme ) :: nfld
+     INTEGER, DIMENSION ( nims:nime, njms:njme ) :: imask
+    
+     REAL, DIMENSION ( cims:cime, cjms:cjme ) , INTENT(IN) :: coarse_xice
+     REAL, DIMENSION ( nims:nime, njms:njme ) , INTENT(IN) :: nest_xice
+
+     REAL, DIMENSION ( cims:cime, cjms:cjme ) , INTENT(IN) :: coarse_xland
+     REAL, DIMENSION ( nims:nime, njms:njme ) , INTENT(IN) :: nest_xland
+
+     integer, dimension( nims:nime,njms:njme ) :: c_x , c_y
+ 
+     INTEGER ci, cj, ck, ni, nj, nk
+     integer :: ccci,cccj,iii,jjj,counter_neigh
+     real :: r_cj,r_ci,d,min_d
+
+     c_x = -999
+     c_y = -999
+
+     do nj = njts,njte
+        r_cj = real(jpos,4) + real((nj-1),4)/real(nrj,4)
+        cj = nint(r_cj)
+        do ni = nits,nite
+           min_d = 0.0
+           if ( (nest_xice(ni,nj) < 0.001) .and. ( (nest_xland(ni,nj)-1.5) < 0. ) ) then
+              r_ci = real(ipos,4) + real((ni-1),4)/real(nri,4)
+              ci = nint(r_ci)
+              if ( (coarse_xice(ci,cj) < 0.001) .and. ( (coarse_xland(ci,cj)-1.5) < 0. ) ) then
+                   c_x(ni,nj) = ci
+                   c_y(ni,nj) = cj
+              else
+                   do iii=-3,3
+                      do jjj=-3,3
+                         ccci = ci+iii
+                         cccj = cj+jjj   
+                         if ( (coarse_xice(ccci,cccj) < 0.001) .and. ( (coarse_xland(ccci,cccj)-1.5) < 0. ) ) then
+                            d = sqrt( (ccci - r_ci)*(ccci-r_ci) + (cccj-r_cj)*(cccj-r_cj) )
+                            if (min_d .eq. 0.0) then
+                                d=min_d
+                            endif
+                            if (d .le. min_d) then
+                               c_x(ni,nj) = ccci
+                               c_y(ni,nj) = cccj
+                            endif
+                         endif ! end of check if the neighborhood point is land ice
+                     enddo 
+                   enddo ! end of loops on neighborhood points
+              endif
+           endif
+        enddo
+     enddo
+     ! Iterate over the ND tile and assign the values
+     ! from the CD tile.  This is a trivial implementation 
+     ! of the interp_fcn; just copies the values from the CD into the ND
+
+     !write(*,*) ' WOOOHOO - in snpacks home !'
+     DO nj = njts, njte
+        DO nk = nkts, nkte
+           ck = nk
+           DO ni = nits, nite
+                   ci = c_x(ni,nj) 
+                   cj = c_y(ni,nj)
+                   !write(*,*) cims,cime, cjms,cjme,nims,nime, njms,njme  
+                   if ( (nest_xice(ni,nj) < 0.001) .and. ( (nest_xland(ni,nj)-1.5) < 0. ) ) then
+                      !write(*,*) 'ni,nj,ci,cj: ',ni,nj,ci,cj
+                      nfld( ni, nk, nj ) = cfld( ci , ck , cj )
+                   else
+                      nfld( ni, nk, nj ) = cfld( cims, ck , cjms ) 
+                   endif
+           ENDDO
+        ENDDO
+     ENDDO
+
+   END SUBROUTINE interp_fcn_nn_snpack
+
+!=========================================================================
+
+!  Nearest neighbor interpolation for snowpacks (for integers)
+
+   SUBROUTINE interp_fcni_nn_snpack ( cfld,                                 &  ! CD field
+                           cids, cide, ckds, ckde, cjds, cjde,   &
+                           cims, cime, ckms, ckme, cjms, cjme,   &
+                           cits, cite, ckts, ckte, cjts, cjte,   &
+                           nfld,                                 &  ! ND field
+                           nids, nide, nkds, nkde, njds, njde,   &
+                           nims, nime, nkms, nkme, njms, njme,   &
+                           nits, nite, nkts, nkte, njts, njte,   &
+                           shw,                                  &  ! stencil half width for interp
+                           imask,                                &  ! interpolation mask
+                           xstag, ystag,                         &  ! staggering of field
+                           ipos, jpos,                           &  ! Position of lower left of nest in CD
+                           nri, nrj,coarse_xice,nest_xice,       &
+                           coarse_xland,nest_xland    )   ! nest ratios
+     IMPLICIT NONE
+
+     INTEGER, INTENT(IN) :: cids, cide, ckds, ckde, cjds, cjde,   &
+                            cims, cime, ckms, ckme, cjms, cjme,   &
+                            cits, cite, ckts, ckte, cjts, cjte,   &
+                            nids, nide, nkds, nkde, njds, njde,   &
+                            nims, nime, nkms, nkme, njms, njme,   &
+                            nits, nite, nkts, nkte, njts, njte,   &
+                            shw,                                  &
+                            ipos, jpos,                           &
+                            nri, nrj
+     LOGICAL, INTENT(IN) :: xstag, ystag
+
+     INTEGER, DIMENSION ( cims:cime, ckms:ckme, cjms:cjme ) :: cfld
+     INTEGER, DIMENSION ( nims:nime, nkms:nkme, njms:njme ) :: nfld
+     INTEGER, DIMENSION ( nims:nime, njms:njme ) :: imask
+    
+     REAL, DIMENSION ( cims:cime, cjms:cjme ) , INTENT(IN) :: coarse_xice
+     REAL, DIMENSION ( nims:nime, njms:njme ) , INTENT(IN) :: nest_xice
+
+     REAL, DIMENSION ( cims:cime, cjms:cjme ) , INTENT(IN) :: coarse_xland
+     REAL, DIMENSION ( nims:nime, njms:njme ) , INTENT(IN) :: nest_xland
+
+     integer, dimension( nims:nime,njms:njme ) :: c_x , c_y
+ 
+     INTEGER ci, cj, ck, ni, nj, nk
+     integer :: ccci,cccj,iii,jjj,counter_neigh
+     real :: r_cj,r_ci,d,min_d
+
+     c_x = -999
+     c_y = -999
+
+     do nj = njts,njte
+        r_cj = real(jpos,4) + real((nj-1),4)/real(nrj,4)
+        cj = nint(r_cj)
+        do ni = nits,nite
+           min_d = 0.0
+           if ( (nest_xice(ni,nj) < 0.001) .and. ( (nest_xland(ni,nj)-1.5) < 0. ) ) then
+              r_ci = real(ipos,4) + real((ni-1),4)/real(nri,4)
+              ci = nint(r_ci)
+              if ( (coarse_xice(ci,cj) < 0.001) .and. ( (coarse_xland(ci,cj)-1.5) < 0. ) ) then
+                   c_x(ni,nj) = ci
+                   c_y(ni,nj) = cj
+              else
+                   do iii=-3,3
+                      do jjj=-3,3
+                         ccci = ci+iii
+                         cccj = cj+jjj   
+                         if ( (coarse_xice(ccci,cccj) < 0.001) .and. ( (coarse_xland(ccci,cccj)-1.5) < 0. ) ) then
+                            d = sqrt( (ccci - r_ci)*(ccci-r_ci) + (cccj-r_cj)*(cccj-r_cj) )
+                            if (min_d .eq. 0.0) then
+                                d=min_d
+                            endif
+                            if (d .le. min_d) then
+                               c_x(ni,nj) = ccci
+                               c_y(ni,nj) = cccj
+                            endif
+                         endif ! end of check if the neighborhood point is land ice
+                      enddo 
+                   enddo ! end of loops on neighborhood points
+              endif
+           endif
+        enddo
+     enddo
+     ! Iterate over the ND tile and assign the values
+     ! from the CD tile.  This is a trivial implementation 
+     ! of the interp_fcn; just copies the values from the CD into the ND
+
+     !write(*,*) ' WOOOHOO - in snpacks home !'
+     DO nj = njts, njte
+        DO nk = nkts, nkte
+           ck = nk
+           DO ni = nits, nite
+                   ci = c_x(ni,nj) 
+                   cj = c_y(ni,nj)
+                   !write(*,*) cims,cime, cjms,cjme,nims,nime, njms,njme  
+                   if ( (nest_xice(ni,nj) < 0.001) .and. ( (nest_xland(ni,nj)-1.5) < 0. ) ) then
+                      !write(*,*) 'ni,nj,ci,cj: ',ni,nj,ci,cj
+                      nfld( ni, nk, nj ) = cfld( ci , ck , cj )
+                   else
+                      nfld( ni, nk, nj ) = cfld (cims , ck , cjms) 
+                   endif
+           ENDDO
+        ENDDO
+     ENDDO
+
+
+   END SUBROUTINE interp_fcni_nn_snpack
+
+
 
 !=========================================================================
 
@@ -2855,6 +3073,9 @@ END MODULE module_interp_info
               ! This is a trivial implementation of the interp_fcn; just copies
               ! the values from the CD into the ND
               nfld( ni, nk, nj ) = cfld( ci , ck , cj )
+                if ( (ni .eq. 28) .and. (nj .eq. 42) ) then
+                   write(*,*) 'nfld(28,:,42) :',nk,nfld(28,nk,42),ci,cj
+                endif
            ENDDO
         ENDDO
      ENDDO
@@ -2862,6 +3083,71 @@ END MODULE module_interp_info
      RETURN
 
    END SUBROUTINE interp_fcni
+
+!==================================
+
+   SUBROUTINE interp_fcni_snpack( cfld,                                 &  ! CD field
+                           cids, cide, ckds, ckde, cjds, cjde,   &
+                           cims, cime, ckms, ckme, cjms, cjme,   &
+                           cits, cite, ckts, ckte, cjts, cjte,   &
+                           nfld,                                 &  ! ND field
+                           nids, nide, nkds, nkde, njds, njde,   &
+                           nims, nime, nkms, nkme, njms, njme,   &
+                           nits, nite, nkts, nkte, njts, njte,   &
+                           shw,                                  &  ! stencil half width
+                           imask,                                &  ! interpolation mask
+                           xstag, ystag,                         &  ! staggering of field
+                           ipos, jpos,                           &  ! Position of lower left of nest in CD
+                           nri, nrj                             )   ! nest ratios
+     USE module_configure
+     IMPLICIT NONE
+
+
+     INTEGER, INTENT(IN) :: cids, cide, ckds, ckde, cjds, cjde,   &
+                            cims, cime, ckms, ckme, cjms, cjme,   &
+                            cits, cite, ckts, ckte, cjts, cjte,   &
+                            nids, nide, nkds, nkde, njds, njde,   &
+                            nims, nime, nkms, nkme, njms, njme,   &
+                            nits, nite, nkts, nkte, njts, njte,   &
+                            shw,                                  &
+                            ipos, jpos,                           &
+                            nri, nrj
+     LOGICAL, INTENT(IN) :: xstag, ystag
+
+     INTEGER, DIMENSION ( cims:cime, ckms:ckme, cjms:cjme ) :: cfld
+     INTEGER, DIMENSION ( nims:nime, nkms:nkme, njms:njme ) :: nfld
+     INTEGER, DIMENSION ( nims:nime, njms:njme ) :: imask
+
+     ! Local
+
+     INTEGER ci, cj, ck, ni, nj, nk, ip, jp
+
+     ! Iterate over the ND tile and compute the values
+     ! from the CD tile. 
+
+!write(0,'("cits:cite, ckts:ckte, cjts:cjte ",6i4)')cits,cite, ckts,ckte, cjts,cjte
+!write(0,'("nits:nite, nkts:nkte, njts:njte ",6i4)')nits,nite, nkts,nkte, njts,njte
+
+     DO nj = njts, njte
+        cj = jpos + (nj-1) / nrj     ! j coord of CD point 
+        jp = mod ( nj , nrj )  ! coord of ND w/i CD point
+        DO nk = nkts, nkte
+           ck = nk
+           DO ni = nits, nite
+              if ( imask(ni,nj) .NE. 1 ) cycle
+              ci = ipos + (ni-1) / nri      ! j coord of CD point 
+              ip = mod ( ni , nri )  ! coord of ND w/i CD point
+              ! This is a trivial implementation of the interp_fcn; just copies
+              ! the values from the CD into the ND
+              nfld( ni, nk, nj ) = cfld( ci , ck , cj )
+           ENDDO
+        ENDDO
+     ENDDO
+
+     RETURN
+
+   END SUBROUTINE interp_fcni_snpack
+
 
    SUBROUTINE interp_fcnm( cfld,                                 &  ! CD field
                            cids, cide, ckds, ckde, cjds, cjde,   &

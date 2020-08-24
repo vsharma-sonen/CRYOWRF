@@ -1192,8 +1192,10 @@ CONTAINS
                                                              CQS, &
                                                              CPM, &
                                                             CHS2, &
-                                                            CQS2
-
+                                                            CQS2, &
+                                                          T2_SEA, &
+                                                         TH2_SEA, &
+                                                          Q2_SEA
 ! SSIB local variables
    REAL ZDIFF
    REAL, DIMENSION( ims:ime , jms:jme ) :: XICE_save
@@ -3121,6 +3123,73 @@ CONTAINS
                 &            ims,ime, jms,jme, kms,kme,                                  &
                 &            i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte )
 
+! Move the check for SFCDIAGS ahead of calculation of diagnostics (F. Gerber, 2020-08-13)
+           DO j=j_start(ij),j_end(ij)
+           DO i=i_start(ij),i_end(ij)
+               ! Check that SFCDIAGS can declare these as intent(out)
+               T2(I,J)  = -1.E36
+               TH2(I,J) = -1.E36
+               Q2(I,J)  = -1.E36
+           ENDDO
+           ENDDO
+
+!jref: sfc diagnostics - calculate diagnostics before fractionation of seaice happens (F. Gerber, 2020-08-13)
+           DO j=j_start(ij),j_end(ij)
+           DO i=i_start(ij),i_end(ij)
+!             IF (IVGTYP(I,J) == ISWATER .OR. XICE(I,J) .GE. XICE_THRESHOLD) THEN
+              IF (IVGTYP(I,J) == ISWATER .OR. (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .GE. XICE_THRESHOLD)) THEN
+
+                 ! Calculate Q2 over ice   
+                 IF(CQS2(I,J).lt.1.E-5) then
+                   Q2(I,J)=QSFC(I,J)
+                 ELSE
+                   Q2(I,J) = QSFC(I,J) - QFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CQS2(I,J))
+                 ENDIF
+
+                 ! Calculate Q2 over the sea
+                 IF(CQS2_sea(I,J).lt.1.E-5) then
+                   Q2_SEA(I,J) = QSFC_SEA(I,J)
+                 ELSE
+                   Q2_SEA(I,J) = QSFC_SEA(I,J) - QFX_sea(I,J)/(PSFC(I,J)/(R_d * TSK_sea(I,J))*CQS2_sea(I,J))
+                 ENDIF
+
+                 ! Calculate T2 over ice
+                 IF(CHS2(I,J).lt.1.E-5) then
+                   T2(I,J) = TSK(I,J)
+                 ELSE
+                   T2(I,J) = TSK(I,J) - HFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CP*CHS2(I,J))
+                 ENDIF
+
+                 ! Calculate T2 over the sea
+                 IF(CHS2_sea(I,J).lt.1.E-5) then
+                   T2_SEA(I,J) = TSK_sea(I,J)
+                 ELSE
+                   T2_SEA(I,J) = TSK_sea(I,J) - HFX_sea(I,J)/(PSFC(I,J)/(R_d * TSK_sea(I,J))*CP*CHS2_sea(I,J))
+                 ENDIF
+
+                 ! Calculate TH2 over ice and sea (not required before fractionation but to keep it in one place)
+                 TH2(I,J)     = T2(I,J)*(1.E5/PSFC(I,J))**RCP
+                 TH2_SEA(I,J) = TH2_SEA(I,J)*(1.E5/PSFC(I,J))**RCP
+
+!             ELSEIF (IVGTYP(I,J) == ISURBAN .OR. IVGTYP(I,J) == ISICE .OR. FVEGXY(I,J) == 0.0 ) THEN
+              ELSEIF (IVGTYP(I,J) == ISURBAN                   .or. &
+                      IVGTYP(I,J) == LOW_DENSITY_RESIDENTIAL   .or. & !urban
+                      IVGTYP(I,J) == HIGH_DENSITY_RESIDENTIAL  .or. & !urban
+                      IVGTYP(I,J) == HIGH_INTENSITY_INDUSTRIAL .or. & !urban
+                      (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .LT. XICE_THRESHOLD)) THEN
+                   Q2(I,J)  = Q2_snpack(I,J)
+                   T2(I,J)  = T2_snpack(I,J)
+                   TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
+              ELSE
+                 T2(I,J)  = FVEGXY(I,J)*T2MVXY(I,J) + (1.-FVEGXY(I,J))*T2MBXY(I,J)
+                 Q2(I,J)  = FVEGXY(I,J)*Q2MVXY(I,J) + (1.-FVEGXY(I,J))*Q2MBXY(I,J)
+                 TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
+              ENDIF
+           ENDDO
+           ENDDO
+
+
+
 
          IF ( FRACTIONAL_SEAICE == 1 ) THEN
             ! LSM Returns full land/ice values, no fractional values.
@@ -3156,6 +3225,9 @@ CONTAINS
 !save old tsk_ice
                         tsk_save(i,j)  = tsk(i,j)
                         tsk(i,j)  = ( tsk(i,j)  * XICE(i,j) ) + ( (1.0-XICE(i,j)) * tsk_sea(i,j)  )
+                        Q2(i,j)   = ( Q2(i,j)   * XICE(i,j) ) + ( (1.0-XICE(i,j)) * Q2_SEA(i,j)   )
+                        T2(i,j)   = ( T2(i,j)   * XICE(i,j) ) + ( (1.0-XICE(i,j)) * T2_SEA(i,j)   )
+                        TH2(i,j)  = ( TH2(i,j)  * XICE(i,j) ) + ( (1.0-XICE(i,j)) * TH2_SEA(i,j)  )
                      ENDIF
                   ENDDO
                ENDDO
@@ -3179,45 +3251,45 @@ CONTAINS
                IF(PRESENT(ACLHF))ACLHF(I,J)=ACLHF(I,J) + LH(I,J)*DT
                IF(PRESENT(ACGRDFLX))ACGRDFLX(I,J)=ACGRDFLX(I,J) + GRDFLX(I,J)*DT
 
-               ! Check that SFCDIAGS can declare these as intent(out)
-               T2(I,J)  = -1.E36
-               TH2(I,J) = -1.E36
-               Q2(I,J)  = -1.E36
+               !! Check that SFCDIAGS can declare these as intent(out)
+               !T2(I,J)  = -1.E36
+               !TH2(I,J) = -1.E36
+               !Q2(I,J)  = -1.E36
            ENDDO
            ENDDO
            
-!jref: sfc diagnostics
-           DO j=j_start(ij),j_end(ij)
-           DO i=i_start(ij),i_end(ij)
-!             IF (IVGTYP(I,J) == ISWATER .OR. XICE(I,J) .GE. XICE_THRESHOLD) THEN
-              IF (IVGTYP(I,J) == ISWATER .OR. (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .GE. XICE_THRESHOLD)) THEN
-                 IF(CQS2(I,J).lt.1.E-5) then
-                   Q2(I,J)=QSFC(I,J)
-                 ELSE
-                   Q2(I,J) = QSFC(I,J) - QFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CQS2(I,J))
-                 ENDIF
-                 IF(CHS2(I,J).lt.1.E-5) then
-                   T2(I,J) = TSK(I,J) 
-                 ELSE
-                   T2(I,J) = TSK(I,J) - HFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CP*CHS2(I,J))
-                 ENDIF
-                   TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**RCP
-!             ELSEIF (IVGTYP(I,J) == ISURBAN .OR. IVGTYP(I,J) == ISICE .OR. FVEGXY(I,J) == 0.0 ) THEN
-              ELSEIF (IVGTYP(I,J) == ISURBAN                   .or. &
-	              IVGTYP(I,J) == LOW_DENSITY_RESIDENTIAL   .or. & !urban
-                      IVGTYP(I,J) == HIGH_DENSITY_RESIDENTIAL  .or. & !urban
-	              IVGTYP(I,J) == HIGH_INTENSITY_INDUSTRIAL .or. & !urban
-	              (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .LT. XICE_THRESHOLD)) THEN
-                   Q2(I,J)  = Q2_snpack(I,J)
-                   T2(I,J)  = T2_snpack(I,J)
-                   TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
-              ELSE
-                 T2(I,J)  = FVEGXY(I,J)*T2MVXY(I,J) + (1.-FVEGXY(I,J))*T2MBXY(I,J)
-                 Q2(I,J)  = FVEGXY(I,J)*Q2MVXY(I,J) + (1.-FVEGXY(I,J))*Q2MBXY(I,J)
-                 TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
-              ENDIF
-           ENDDO
-           ENDDO
+!!jref: sfc diagnostics
+!           DO j=j_start(ij),j_end(ij)
+!           DO i=i_start(ij),i_end(ij)
+!!             IF (IVGTYP(I,J) == ISWATER .OR. XICE(I,J) .GE. XICE_THRESHOLD) THEN
+!              IF (IVGTYP(I,J) == ISWATER .OR. (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .GE. XICE_THRESHOLD)) THEN
+!                 IF(CQS2(I,J).lt.1.E-5) then
+!                   Q2(I,J)=QSFC(I,J)
+!                 ELSE
+!                   Q2(I,J) = QSFC(I,J) - QFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CQS2(I,J))
+!                 ENDIF
+!                 IF(CHS2(I,J).lt.1.E-5) then
+!                   T2(I,J) = TSK(I,J) 
+!                 ELSE
+!                   T2(I,J) = TSK(I,J) - HFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CP*CHS2(I,J))
+!                 ENDIF
+!                   TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**RCP
+!!             ELSEIF (IVGTYP(I,J) == ISURBAN .OR. IVGTYP(I,J) == ISICE .OR. FVEGXY(I,J) == 0.0 ) THEN
+!              ELSEIF (IVGTYP(I,J) == ISURBAN                   .or. &
+!!	              IVGTYP(I,J) == LOW_DENSITY_RESIDENTIAL   .or. & !urban
+!                      IVGTYP(I,J) == HIGH_DENSITY_RESIDENTIAL  .or. & !urban
+!	              IVGTYP(I,J) == HIGH_INTENSITY_INDUSTRIAL .or. & !urban
+!	              (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .LT. XICE_THRESHOLD)) THEN
+!                   Q2(I,J)  = Q2_snpack(I,J)
+!                   T2(I,J)  = T2_snpack(I,J)
+!                   TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
+!              ELSE
+!                 T2(I,J)  = FVEGXY(I,J)*T2MVXY(I,J) + (1.-FVEGXY(I,J))*T2MBXY(I,J)
+!                 Q2(I,J)  = FVEGXY(I,J)*Q2MVXY(I,J) + (1.-FVEGXY(I,J))*Q2MBXY(I,J)
+!                 TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
+!              ENDIF
+!           ENDDO
+!           ENDDO
 
            DO j=j_start(ij),j_end(ij)
            DO i=i_start(ij),i_end(ij)
@@ -3445,6 +3517,82 @@ CONTAINS
               &            ims,ime, jms,jme, kms,kme,                                  &
               &            i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte )
 
+! Move the check for SFCDIAGS ahead of calculation of diagnostics (F. Gerber, 2020-08-13)
+           DO j=j_start(ij),j_end(ij)
+           DO i=i_start(ij),i_end(ij)
+               ! Check that SFCDIAGS can declare these as intent(out)
+               T2(I,J)  = -1.E36
+               TH2(I,J) = -1.E36
+               Q2(I,J)  = -1.E36
+           ENDDO
+           ENDDO
+
+!jref: sfc diagnostics - calculate diagnostics before fractionation of seaice happens (F. Gerber, 2020-08-13)
+           DO j=j_start(ij),j_end(ij)
+           DO i=i_start(ij),i_end(ij)
+!             IF (IVGTYP(I,J) == ISWATER .OR. XICE(I,J) .GE. XICE_THRESHOLD) THEN
+              IF (IVGTYP(I,J) == ISWATER .OR. (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .GE. XICE_THRESHOLD)) THEN
+
+                 ! Calculate Q2 over ice
+                 IF(CQS2(I,J).lt.1.E-5) then
+                   Q2(I,J)=QSFC(I,J)
+                 ELSE
+                   Q2(I,J) = QSFC(I,J) - QFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CQS2(I,J))
+                 ENDIF
+
+                 ! Calculate Q2 over the sea
+                 IF(CQS2_sea(I,J).lt.1.E-5) then
+                   Q2_SEA(I,J)=QSFC_sea(I,J)
+                 ELSE
+                   Q2_SEA(I,J) = QSFC_sea(I,J) - QFX_sea(I,J)/(PSFC(I,J)/(R_d * TSK_sea(I,J))*CQS2_sea(I,J))
+                 ENDIF
+
+                 ! Calculate T2 over ice
+                 IF(CHS2(I,J).lt.1.E-5) then
+                   T2(I,J) = TSK(I,J)
+                 ELSE
+                   T2(I,J) = TSK(I,J) - HFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CP*CHS2(I,J))
+                 ENDIF
+
+                 ! Calculate T2 over sea
+                 IF(CHS2_sea(I,J).lt.1.E-5) then
+                   T2_SEA(I,J) = TSK_sea(I,J)
+                 ELSE
+                   T2_SEA(I,J) = TSK_sea(I,J) - HFX_sea(I,J)/(PSFC(I,J)/(R_d * TSK_sea(I,J))*CP*CHS2_sea(I,J))
+                 ENDIF
+
+                 ! Calculate TH2 over ice and sea (not required before fractionation but to keep it in one place)
+                 TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**RCP
+                 TH2_SEA(I,J) = T2_SEA(I,J)*(1.E5/PSFC(I,J))**RCP
+
+!             ELSEIF (IVGTYP(I,J) == ISURBAN .OR. IVGTYP(I,J) == ISICE .OR. FVEGXY(I,J) == 0.0 ) THEN
+              ELSEIF (IVGTYP(I,J) == ISURBAN                   .or. &
+                      IVGTYP(I,J) == LOW_DENSITY_RESIDENTIAL   .or. & !urban
+                      IVGTYP(I,J) == HIGH_DENSITY_RESIDENTIAL  .or. & !urban
+                      IVGTYP(I,J) == HIGH_INTENSITY_INDUSTRIAL .or. & !urban
+                      (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .LT. XICE_THRESHOLD)) THEN
+                   Q2(I,J)  = Q2MBXY(I,J)
+                   T2(I,J)  = T2MBXY(I,J)
+                   TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
+              ELSE
+                 T2(I,J)  = FVEGXY(I,J)*T2MVXY(I,J) + (1.-FVEGXY(I,J))*T2MBXY(I,J)
+                 Q2(I,J)  = FVEGXY(I,J)*Q2MVXY(I,J) + (1.-FVEGXY(I,J))*Q2MBXY(I,J)
+                 TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
+              ENDIF
+           ENDDO
+           ENDDO
+
+!          CALL SFCDIAGS(HFX,QFX,TSK,QSFC,CHS2,CQS2,T2,TH2,Q2,      &
+!                     PSFC,CP,R_d,RCP,CHS,t_phy,qv_curr,ua_phys,    &
+!                     ids,ide, jds,jde, kds,kde,                    &
+!                     ims,ime, jms,jme, kms,kme,                    &
+!             i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte    )
+
+!jref: sfc diagnostics end
+
+
+
+
          IF ( FRACTIONAL_SEAICE == 1 ) THEN
             ! LSM Returns full land/ice values, no fractional values.
             ! We return to a fractional component here.  SFLX currently hard-wires
@@ -3479,6 +3627,9 @@ CONTAINS
 !save old tsk_ice
                         tsk_save(i,j)  = tsk(i,j)
                         tsk(i,j)  = ( tsk(i,j)  * XICE(i,j) ) + ( (1.0-XICE(i,j)) * tsk_sea(i,j)  )
+                        Q2(i,j)   = ( Q2(i,j)   * XICE(i,j) ) + ( (1.0-XICE(i,j)) * Q2_SEA(i,j)   )
+                        T2(i,j)   = ( T2(i,j)   * XICE(i,j) ) + ( (1.0-XICE(i,j)) * T2_SEA(i,j)   )
+                        TH2(i,j)  = ( TH2(i,j)  * XICE(i,j) ) + ( (1.0-XICE(i,j)) * TH2_SEA(i,j)  )
                      ENDIF
                   ENDDO
                ENDDO
@@ -3502,53 +3653,53 @@ CONTAINS
                IF(PRESENT(ACLHF))ACLHF(I,J)=ACLHF(I,J) + LH(I,J)*DT
                IF(PRESENT(ACGRDFLX))ACGRDFLX(I,J)=ACGRDFLX(I,J) + GRDFLX(I,J)*DT
 
-               ! Check that SFCDIAGS can declare these as intent(out)
-               T2(I,J)  = -1.E36
-               TH2(I,J) = -1.E36
-               Q2(I,J)  = -1.E36
+               !! Check that SFCDIAGS can declare these as intent(out)
+               !T2(I,J)  = -1.E36
+               !TH2(I,J) = -1.E36
+               !Q2(I,J)  = -1.E36
            ENDDO
            ENDDO
            
-!jref: sfc diagnostics
-           DO j=j_start(ij),j_end(ij)
-           DO i=i_start(ij),i_end(ij)
-!             IF (IVGTYP(I,J) == ISWATER .OR. XICE(I,J) .GE. XICE_THRESHOLD) THEN
-              IF (IVGTYP(I,J) == ISWATER .OR. (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .GE. XICE_THRESHOLD)) THEN
-                 IF(CQS2(I,J).lt.1.E-5) then
-                   Q2(I,J)=QSFC(I,J)
-                 ELSE
-                   Q2(I,J) = QSFC(I,J) - QFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CQS2(I,J))
-                 ENDIF
-                 IF(CHS2(I,J).lt.1.E-5) then
-                   T2(I,J) = TSK(I,J) 
-                 ELSE
-                   T2(I,J) = TSK(I,J) - HFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CP*CHS2(I,J))
-                 ENDIF
-                   TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**RCP
-!             ELSEIF (IVGTYP(I,J) == ISURBAN .OR. IVGTYP(I,J) == ISICE .OR. FVEGXY(I,J) == 0.0 ) THEN
-              ELSEIF (IVGTYP(I,J) == ISURBAN                   .or. &
-	              IVGTYP(I,J) == LOW_DENSITY_RESIDENTIAL   .or. & !urban
-                      IVGTYP(I,J) == HIGH_DENSITY_RESIDENTIAL  .or. & !urban
-	              IVGTYP(I,J) == HIGH_INTENSITY_INDUSTRIAL .or. & !urban
-	              (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .LT. XICE_THRESHOLD)) THEN
-                   Q2(I,J)  = Q2MBXY(I,J)
-                   T2(I,J)  = T2MBXY(I,J)
-                   TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
-              ELSE
-                 T2(I,J)  = FVEGXY(I,J)*T2MVXY(I,J) + (1.-FVEGXY(I,J))*T2MBXY(I,J)
-                 Q2(I,J)  = FVEGXY(I,J)*Q2MVXY(I,J) + (1.-FVEGXY(I,J))*Q2MBXY(I,J)
-                 TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
-              ENDIF
-           ENDDO
-           ENDDO
-           
-!          CALL SFCDIAGS(HFX,QFX,TSK,QSFC,CHS2,CQS2,T2,TH2,Q2,      &
-!                     PSFC,CP,R_d,RCP,CHS,t_phy,qv_curr,ua_phys,    &
-!                     ids,ide, jds,jde, kds,kde,                    &
-!                     ims,ime, jms,jme, kms,kme,                    &
-!             i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte    )
-
-!jref: sfc diagnostics end
+!!jref: sfc diagnostics
+!           DO j=j_start(ij),j_end(ij)
+!           DO i=i_start(ij),i_end(ij)
+!!             IF (IVGTYP(I,J) == ISWATER .OR. XICE(I,J) .GE. XICE_THRESHOLD) THEN
+!              IF (IVGTYP(I,J) == ISWATER .OR. (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .GE. XICE_THRESHOLD)) THEN
+!                 IF(CQS2(I,J).lt.1.E-5) then
+!                   Q2(I,J)=QSFC(I,J)
+!                 ELSE
+!                   Q2(I,J) = QSFC(I,J) - QFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CQS2(I,J))
+!                 ENDIF
+!                 IF(CHS2(I,J).lt.1.E-5) then
+!                   T2(I,J) = TSK(I,J) 
+!                 ELSE
+!                   T2(I,J) = TSK(I,J) - HFX(I,J)/(PSFC(I,J)/(R_d * TSK(I,J))*CP*CHS2(I,J))
+!                 ENDIF
+!                   TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**RCP
+!!             ELSEIF (IVGTYP(I,J) == ISURBAN .OR. IVGTYP(I,J) == ISICE .OR. FVEGXY(I,J) == 0.0 ) THEN
+!              ELSEIF (IVGTYP(I,J) == ISURBAN                   .or. &
+!	              IVGTYP(I,J) == LOW_DENSITY_RESIDENTIAL   .or. & !urban
+!                      IVGTYP(I,J) == HIGH_DENSITY_RESIDENTIAL  .or. & !urban
+!	              IVGTYP(I,J) == HIGH_INTENSITY_INDUSTRIAL .or. & !urban
+!	              (IVGTYP(I,J) == ISICE .AND. XICE(I,J) .LT. XICE_THRESHOLD)) THEN
+!                   Q2(I,J)  = Q2MBXY(I,J)
+!                   T2(I,J)  = T2MBXY(I,J)
+!                   TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
+!              ELSE
+!                 T2(I,J)  = FVEGXY(I,J)*T2MVXY(I,J) + (1.-FVEGXY(I,J))*T2MBXY(I,J)
+!                 Q2(I,J)  = FVEGXY(I,J)*Q2MVXY(I,J) + (1.-FVEGXY(I,J))*Q2MBXY(I,J)
+!                 TH2(I,J) = T2(i,j)*(1.E5/PSFC(i,j))**RCP
+!              ENDIF
+!           ENDDO
+!           ENDDO
+!           
+!!          CALL SFCDIAGS(HFX,QFX,TSK,QSFC,CHS2,CQS2,T2,TH2,Q2,      &
+!!                     PSFC,CP,R_d,RCP,CHS,t_phy,qv_curr,ua_phys,    &
+!!                     ids,ide, jds,jde, kds,kde,                    &
+!!                     ims,ime, jms,jme, kms,kme,                    &
+!!             i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte    )
+!
+!!jref: sfc diagnostics end
 
          IF(SF_URBAN_PHYSICS.eq.1) THEN
            DO j=j_start(ij),j_end(ij)                             !urban

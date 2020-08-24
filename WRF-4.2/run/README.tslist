@@ -54,7 +54,13 @@ larger buffers. Thus, it is recommended that the size of the buffer be set
 to the maximum number of time steps for any domain in a model run. 
 
 By default, the u, v, and w component winds are output on the staggered grid. 
-To unstagger them, the namelist variable tslist_unstagger_winds can be set to true.
+To unstagger them, the namelist variable tslist_unstagger_winds can be set to
+true.
+
+By default a folder "./timeseries/" will be created in which the timeseries
+files will be saved. The variable tslist_outfolder in the namelist in &domains
+gives the option to specify a custom folder to save the timeseries files. The
+length of the folder path should not exceed 28 (including "." and "/").
 
 Namelist.input variables related to to this new capability:
 
@@ -64,6 +70,8 @@ Namelist.input variables related to to this new capability:
    The maximum number of max_ts_level is e_vert-1 (the number of half layers in the model run)
  * tslist_unstagger_winds = output the unstaggered u, v, and w component
    winds (default is false)
+ * tslist_outfolder = folder to which the timeseries files will be
+   written (default: "./timeseries/").
 
 The first line in a time-series output of surface variables (pfx*.dNN.TS) looks like this:
 
@@ -95,6 +103,27 @@ rainnc:		rainfall from an explicit scheme (mm)
 clw:		total column-integrated water vapor and cloud variables
 Example:
  2     0.033333    7  153  207     -39.49153       0.00104      -4.57959       7.21139   99064.35938     168.17384      12.06811     -41.77642       0.00001     259.18286     271.35104       0.00000       0.00000       0.00000
+
+If SNOWPACK is used as surface scheme (i.e. sf_surface_physics = 18), snow
+drift will be written as an additional variable, which is:
+snd:           Snow drift (kg m-1 s-1)
+
+In addtition, the following vertical profiles will be written to separate
+files:
+pfx.dNN.QD: Blowing snow mixing ratio (kg/kg)
+pfx.dNN.ND: Blowing snow number concentration (kg^-1)
+pfx.dNN.QS: Snow drift mass (below first model level) (kg m^-2 s^-1)
+pfx.dNN.NS: Snow drift number (below first model level) (# m^-2 s^-1)
+ 
+each line starts with the model time in hours, followed by the variable
+at model level 1,2,3, ... up to the highest model level of interest for QD and
+ND, while QS and NS will be written for all levels in the blowing snow layer
+below the first model layer (as specified in namelist.input, &physics, num_bs_sfc_layers).
+
+
+Note: snd will be written if sf_surface_physics = 18, regardless whether
+solar_diagnostics is activated or not (see below). In any case it is the
+variable after clw.
 
 
 If solar_diagnostics is activated (see README.namelist) and tslist is present, then time series variables relevant to solar forecasting.

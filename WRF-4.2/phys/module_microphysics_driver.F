@@ -3283,11 +3283,11 @@ qni_final = max(1.0E-6,qni_final)
 endif ! END OF BLOWING SNOW SUBLIMATION
 
 
-   if( (I .eq. 24) .and. (J .eq. 24) ) then 
-    do k=1,20
-       write(*,*) 'qi_final,qni_final: ',qi_final(k),qni_final(k),bs_Kmix(k)
-    enddo
-   endif
+!   if( (I .eq. 24) .and. (J .eq. 24) ) then 
+!    do k=1,20
+!       write(*,*) 'qi_final,qni_final: ',qi_final(k),qni_final(k),bs_Kmix(k)
+ !   enddo
+ !  endif
 
 
 if(bs_rad_effect) then 

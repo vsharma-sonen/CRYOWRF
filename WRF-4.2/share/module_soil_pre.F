@@ -112,6 +112,7 @@ CONTAINS
                   IF ( skip_middle_points_t ( ids , ide , jds , jde , i , j , em_width , hold_ups ) ) CYCLE 
                   IF ( ( xice(i,j) .GE. xice_threshold ) .OR. &
                        ( ( landmask(i,j) .LT. 0.5 ) .AND. ( tsk(i,j) .LT. seaice_threshold ) ) ) THEN
+
                      IF ( FRACTIONAL_SEAICE == 0 ) THEN
                         xice(i,j) = 1.0
                      ENDIF
@@ -139,6 +140,7 @@ CONTAINS
                      soilcbot(i,isltyp(i,j),j)=1.
                   ELSE
                      xice(i,j) = 0.0
+
                   END IF
                END DO
             END DO
@@ -256,6 +258,7 @@ CONTAINS
                        ( ( landmask(i,j) .LT. 0.5 ) .AND. ( tsk(i,j) .LT. seaice_threshold ) ) ) THEN
                      IF ( FRACTIONAL_SEAICE == 0 ) THEN
                         xice(i,j) = 1.0
+
                      ENDIF
                      num_seaice_changes = num_seaice_changes + 1
                      if(landmask(i,j) .LT. 0.5 )tmn(i,j) = 271.4
