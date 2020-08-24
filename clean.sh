@@ -1,2 +1,2 @@
 
-rm -rf ./snpack_for_wrf/snow_libs/*
+rm -rf ./snpack_for_wrf/snow_libs
