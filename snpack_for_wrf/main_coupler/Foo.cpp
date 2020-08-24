@@ -577,8 +577,8 @@ int SnowpackInterface::init_sn(int snpack_layers_to_save,double Lat,double Lon,d
 
    //Constants::density_air = wrf_rho;
 
-   compute_counter = int(snpack_dt       / in_calc_step_length) ; 
-   write_counter   = int(snpack_write_dt / in_calc_step_length) ; 
+   compute_counter = int(snpack_dt       / (in_calc_step_length * double(60.0))) ; 
+   write_counter   = int(snpack_write_dt / (in_calc_step_length * double(60.0))) ; 
 
    loc_snpack_lay_to_sav = snpack_layers_to_save ; 
 
