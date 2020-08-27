@@ -77,12 +77,12 @@
 ! 1) changes and cleanup of code comments
 ! 2) correction to universal gas constant (very small change)
 !
-! CHANGES G. Sotiropoulou and E. Vignon (2020)
+! CHANGES BY G. Sotiropoulou and E. Vignon (2020)
 !
-! Add secondary ice production through ice-ice collision following Sotiropoulou et al. (ACP)
+! Add secondary ice production through ice-ice collision following Sotiropoulou et al. 2020, ACP
 ! Add possibility to use DeMott 2010 parameterisation for ice nucleation (Gilian Young)
 ! Option to active an ice nucleation parameterization in the Southern Ocean environment 
-! (from measurements during the MARCUS campaign), see Vignon et al 2020, GRL
+! (from measurements during the MARCUS campaign), see Vignon et al. 2020, JGR Atmos
 ! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -116,24 +116,33 @@ MODULE MODULE_MP_MORR_TWO_MOMENT
 
 ! SET CONSTANT DROPLET CONCENTRATION (UNITS OF CM-3)
 ! IF NO COUPLING WITH WRF-CHEM
-! should be 100 for high Southern Latitude conditions, 50 for Arctic conditions, 250 for continental cases
+! should be 100 for high Southern Latitude conditions, 
+! 50 for Arctic conditions (Cassano et al.), 250 for continental cases
 
-    REAL, PARAMETER ::    NDCNST= 100.  
+   REAL, PARAMETER ::    NDCNST= 100.  
 
 ! FLAGS FOR ICE NUCLEATION
 
-   INTEGER, PARAMETER ::  INUC=2               ! if =1, use MPACE observations (G. Young), if =2  Activate the new nucleation parameterization for high Southern Latitude Condition (E. Vignon)
-   LOGICAL, PARAMETER :: nuc_demott=.true.     ! Deposition nucleation  using DeMott 2010 param (GY, default =false)
+   INTEGER, PARAMETER ::  INUC=2              
+! default=0. if =1, use MPACE observations (G. Young), if =2
+! Activate the new nucleation parameterization for high Southern Latitude Conditions (E. Vignon)
+   LOGICAL, PARAMETER :: nuc_demott=.true.     
+! Deposition nucleation  using DeMott 2010 param (GY, default =false)
    REAL, PARAMETER :: demott_a = 5.94e-5
    REAL, PARAMETER :: demott_b = 3.33, demott_c = 0.0264
-   REAL, PARAMETER :: demott_d = 0.0033, demott_num = 0.10      ! aerosolestimate from Grimm  GY 25/10/2017
+   REAL, PARAMETER :: demott_d = 0.0033, demott_num = 0.10   
+! aerosol estimate from Grimm  GY 25/10/2017
 
 ! FLAG FOR SECONDARY ICE PRODUCTIONs
 
-   LOGICAL, PARAMETER         ::         log_hmossopOn=.true.   ! DO you activate secondary ice production through Hallett Mossop process (true by default)
-   LOGICAL, PARAMETER         ::         log_breakupOn=.true.   ! Activate or not the secondary ice production through snowflake break-up
-   LOGICAL, PARAMETER         ::         Phillips_On=.false.
-   LOGICAL, PARAMETER         ::         Takahashi_On= .false.
+   LOGICAL, PARAMETER         ::         log_hmossopOn=.true.   
+! DO you activate secondary ice production through Hallett Mossop process (true by default)
+   LOGICAL, PARAMETER         ::         log_breakupOn=.true.  
+! Activate or not the secondary ice production through snowflake break-up
+   LOGICAL, PARAMETER         ::         Phillips_On=.false.   
+! Use the Phillips param. for the secondary ice production through snowflake break-up
+   LOGICAL, PARAMETER         ::         Takahashi_On= .false.  
+! Use the Takashi param. for the secondary ice production through snowflake break-up
 
    PUBLIC  ::  MP_MORR_TWO_MOMENT
    PUBLIC  ::  POLYSVP
@@ -351,7 +360,7 @@ SUBROUTINE MORR_TWO_MOMENT_INIT(morr_rimed_ice) ! RAS
       ELSE
          IHAIL = 0
       ENDIF
-    IHAIL=0 
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! SET PHYSICAL CONSTANTS
@@ -583,7 +592,8 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
                ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
 !jdf		   ,C2PREC3D,CSED3D,ISED3D,SSED3D,GSED3D,RSED3D & ! HM ADD, WRF-CHEM
                ,rainprod, evapprod                      &
-		       ,QLSINK,PRECR,PRECI,PRECS,PRECG)        ! HM ADD, WRF-CHEM
+		   ,QLSINK,PRECR,PRECI,PRECS,PRECG &
+                                            )        ! HM ADD, WRF-CHEM
  
 
 
@@ -945,7 +955,7 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
        NI3DTEN,NS3DTEN,NR3DTEN,QC3D,QI3D,QNI3D,QR3D,NI3D,NS3D,NR3D,              &
        T3DTEN,QV3DTEN,T3D,QV3D,PRES,DZQ,W3D,WVAR,PRECRT,SNOWRT,            &
        SNOWPRT,GRPLPRT,                & ! hm added 7/13/13
-         EFFC,EFFI,EFFS,EFFR,DT,                                                   &
+       EFFC,EFFI,EFFS,EFFR,DT,                                                   &
                                             IMS,IME, JMS,JME, KMS,KME,           &
                                             ITS,ITE, JTS,JTE, KTS,KTE,           & ! ADD GRAUPEL
                         QG3DTEN,NG3DTEN,QG3D,NG3D,EFFG,qrcu1d,qscu1d, qicu1d,    &
@@ -955,7 +965,7 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
 #if (WRF_CHEM == 1)
         ,rainprod, evapprod &
 #endif
-         )
+                        )
  
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ! THIS PROGRAM IS THE MAIN TWO-MOMENT MICROPHYSICS SUBROUTINE DESCRIBED BY
