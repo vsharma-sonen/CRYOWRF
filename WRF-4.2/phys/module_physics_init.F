@@ -3237,7 +3237,7 @@ CALL lsm_mosaic_init(IVGTYP,config_flags%ISWATER,config_flags%ISURBAN,config_fla
           in_N_lb  = real(0.0,8)
 
           in_glo_counter = 999
-          CALL snowpack_init(snow,snowh,XLAND,XICE,xlat,xlong, &
+          CALL snowpack_init(snow,snowh,isltyp,xlat,xlong, &
                              ids,ide,jds,jde,kds,kde,  &
                              ims,ime,jms,jme,kms,kme,  &
                              its,ite,jts,jte,kts,kte,  &

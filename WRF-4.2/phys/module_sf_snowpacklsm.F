@@ -523,7 +523,7 @@ enddo
 
       !!!! HERE THE CODE SPLITS BETWEEN LAND WITH ICE (isltyp==8) AND LAND WITHOUT ICE
 
-      !IF(ISLTYP(I,J) == 8 ) then
+      IF(ISLTYP(I,J) == 8 ) then
 
 
          in_H   = real(Z_ML,8)    ! (1) 
@@ -702,7 +702,7 @@ enddo
     sfc_T(I,1:snc_N,J) = real(TRAD  - prof_const_a*(max((log(real(snc_Z(I,:,J),4)/Z0WRF)-real(l_psi_s,4)),0.7)),4)
     sfc_Q(I,1:snc_N,J) = real(QSFC1D - prof_const_b*(max((log(real(snc_Z(I,:,J),4)/Z0WRF)-real(l_psi_s,4)),0.7)),4)
    
-   !ENDIF ! glacial split ends 
+   ENDIF ! glacial split ends 
 
 ! INPUT/OUTPUT
              m_budg_deposit(I,J) =    m_budg_deposit(I,J)  +  real(l_mbug_deposit   ,4)
@@ -743,7 +743,7 @@ enddo
 
    IILOOP : DO I = its, ite
         JJLOOP : DO J = jts , jte
-             if ( (xice(i,j) < xice_thres) .and. ((xland(i,j)-1.5) < 0.) ) then
+             if ( ISLTYP(I,J) == 8 ) then
 
              else
 
@@ -754,7 +754,7 @@ enddo
                    do jjj=-5,5
                       ccci = i + iii
                       cccj = j + jjj
-                      if( (xice(ccci,cccj) < xice_thres) .and. ((xland(ccci,cccj)-1.5) < 0.) .and. (sn_nlayers(ccci,cccj) .gt. 0)  ) then
+                      if( (ISLTYP(ccci,cccj) == 8) .and. (sn_nlayers(ccci,cccj) .gt. 0)  ) then
                            d = sqrt( real( (iii)*(iii) + (jjj) * (jjj) , 4) )
                            if(min_d .eq. 0.0) then
                               d = min_d
@@ -796,7 +796,7 @@ endif
   END SUBROUTINE snowpacklsm
 !------------------------------------------------------
 
-  SUBROUTINE snowpack_init (SNOW,SNOWH,XLAND,XICE,XLAT,XLONG, &
+  SUBROUTINE snowpack_init (SNOW,SNOWH,ISLTYP,XLAT,XLONG, &
        ids,ide, jds,jde, kds,kde,                &
        ims,ime, jms,jme, kms,kme,                &
        its,ite, jts,jte, kts,kte,                &
@@ -814,18 +814,18 @@ endif
    double precision :: tmp_snpack_dt,tmp_snpack_write_dt
    real, dimension(ims:ime,jms:jme),intent(in) :: z_firstlev
    integer, intent(in) :: snpack_layers_to_save
-   real,    optional, dimension(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_T
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_thick
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_volI
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_volW
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_volV
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_rg
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_rb
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_dd
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_sp
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_cdot
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_meta
-   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(inout)  :: sn_depd
+   real,    optional, dimension(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_T
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_thick
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_volI
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_volW
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_volV
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_rg
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_rb
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_dd
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_sp
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_cdot
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_meta
+   REAL,    OPTIONAL, DIMENSION(ims:ime,snpack_layers_to_save,jms:jme),intent(in)  :: sn_depd
 
    integer,intent(in) :: snc_N
    real,dimension(ims:ime,snc_N,jms:jme), intent(inout) :: snc_Z
@@ -841,7 +841,7 @@ endif
     double precision, dimension(snpack_layers_to_save) :: arr_cdot
     double precision, dimension(snpack_layers_to_save) :: arr_meta
     double precision, dimension(snpack_layers_to_save) :: arr_depd
-    integer,intent(inout),dimension(ims:ime,jms:jme) :: snpack_nlayers
+    integer,intent(in),dimension(ims:ime,jms:jme) :: snpack_nlayers
     logical,intent(in) :: sn_from_file
     INTEGER, INTENT(IN) :: id
     INTEGER, INTENT(IN   )    ::     ids,ide, jds,jde, kds,kde,  &
@@ -849,7 +849,7 @@ endif
          &                           its,ite, jts,jte, kts,kte
 
     REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)    ::     SNOW,SNOWH
-    REAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN)   :: XLAND,XICE
+    INTEGER, DIMENSION( ims:ime, jms:jme ), INTENT(IN)   :: ISLTYP
     REAL, DIMENSION(ims:ime,jms:jme), INTENT(IN) :: XLAT,XLONG         !latitude
     REAL, DIMENSION(ims:ime,jms:jme), INTENT(IN) , OPTIONAL :: HT          !terrain height (m)
     integer, optional, dimension(ims:ime,jms:jme), intent(inout) :: in_glo_counter
@@ -865,10 +865,6 @@ endif
     real :: z_top,z_top_c,z_bot,dz_bot
     integer :: nz_c
     double precision :: tmp_snow,tmp_snowh
-    integer :: iii,jjj,ccci,cccj,c_x,c_y
-    real :: min_d,d 
-    integer :: mmm
-
 
     itf=min0(ite,ide-1)
     jtf=min0(jte,jde-1)
@@ -880,7 +876,7 @@ endif
     counter_snowpoints=0
     do J=jts,jtf
          do I=its,itf
-            if( (xice(i,j) < 0.001) .and. ( (xland(i,j)-1.5) < 0. ) ) then
+            if(ISLTYP(I,J) == 8 ) then
                counter_snowpoints = counter_snowpoints + 1
             endif
          enddo
@@ -910,15 +906,12 @@ endif
              simulation_start_hour,simulation_start_minute,simulation_start_second
        simulation_start_date(1:24) = simulation_start_date(1:19)//'.0000'
      
-
        counter_snowpoints=0
        do J=jts,jtf
           do I=its,itf
-             if( (xice(i,j) < 0.001) .and. ((xland(i,j)-1.5) < 0.)  ) then
+             if(ISLTYP(I,J) == 8  ) then
                 counter_snowpoints = counter_snowpoints + 1
                 in_glo_counter(I,J) = counter_snowpoints
-                
-                if(snpack_nlayers(I,J) .gt. 0) then
                      arr_T     = real(sn_T(I,1:snpack_layers_to_save,J),8)
                      arr_thick = real(sn_thick(I,1:snpack_layers_to_save,J),8)
                      arr_volI  = real(sn_volI(I,1:snpack_layers_to_save,J),8)
@@ -932,60 +925,7 @@ endif
                      arr_cdot  = real(sn_cdot(I,1:snpack_layers_to_save,J),8)
                      arr_meta  = real(sn_meta(I,1:snpack_layers_to_save,J),8)
                      arr_depd  = real(sn_depd(I,1:snpack_layers_to_save,J),8)
-                else
-                     min_d = 0.0
-                     c_x = i
-                     c_y = j
-                     do iii=-5,5
-                        do jjj=-5,5
-                           ccci = i + iii
-                           cccj = j + jjj
-                           if( (xice(ccci,cccj) < 0.001) .and. ((xland(ccci,cccj)-1.5) < 0.) .and. (snpack_nlayers(ccci,cccj) .gt. 0)  ) then
-                                d = sqrt( real( (iii)*(iii) + (jjj) * (jjj) , 4) )
-                                if(min_d .eq. 0.0) then
-                                   d = min_d
-                                endif
-                                if(d .le. min_d) then
-                                   min_d = d
-                                   c_x = ccci
-                                   c_y = cccj 
-                                endif
-                           endif 
-                        enddo
-                     enddo    
-
-                     sn_T(I,1:snpack_layers_to_save,J)     = sn_T(c_x,1:snpack_layers_to_save,c_y)
-                     sn_thick(I,1:snpack_layers_to_save,J) = sn_thick(c_x,1:snpack_layers_to_save,c_y)
-                     sn_volI(I,1:snpack_layers_to_save,J)  = sn_volI(c_x,1:snpack_layers_to_save,c_y)
-                     sn_volW(I,1:snpack_layers_to_save,J)  = sn_volW(c_x,1:snpack_layers_to_save,c_y)
-                     sn_volV(I,1:snpack_layers_to_save,J)  = sn_volV(c_x,1:snpack_layers_to_save,c_y)
-                     sn_rg(I,1:snpack_layers_to_save,J)    = sn_rg(c_x,1:snpack_layers_to_save,c_y)
-                                                              
-                     sn_rb(I,1:snpack_layers_to_save,J)    = sn_rb(c_x,1:snpack_layers_to_save,c_y)
-                     sn_dd(I,1:snpack_layers_to_save,J)    = sn_dd(c_x,1:snpack_layers_to_save,c_y)
-                     sn_sp(I,1:snpack_layers_to_save,J)    = sn_sp(c_x,1:snpack_layers_to_save,c_y)
-                     sn_cdot(I,1:snpack_layers_to_save,J)  = sn_cdot(c_x,1:snpack_layers_to_save,c_y)
-                     sn_meta(I,1:snpack_layers_to_save,J)  = sn_meta(c_x,1:snpack_layers_to_save,c_y)
-                     sn_depd(I,1:snpack_layers_to_save,J)  = sn_depd(c_x,1:snpack_layers_to_save,c_y)
-
-                     arr_T     = real(sn_T(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_thick = real(sn_thick(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_volI  = real(sn_volI(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_volW  = real(sn_volW(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_volV  = real(sn_volV(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_rg    = real(sn_rg(c_x,1:snpack_layers_to_save,c_y),8)
-     
-                     arr_rb    = real(sn_rb(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_dd    = real(sn_dd(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_sp    = real(sn_sp(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_cdot  = real(sn_cdot(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_meta  = real(sn_meta(c_x,1:snpack_layers_to_save,c_y),8)
-                     arr_depd  = real(sn_depd(c_x,1:snpack_layers_to_save,c_y),8)
-
-                     snpack_nlayers(I,J) = snpack_nlayers(c_x,c_y)
-
-                endif
-
+                
                 if(new_alloc) then
                    write(*,*) 'NEW ALLOC MUST BE DONE for GRID: ',id, I,J
                    call init_snowpack(id,counter_snowpoints,snpack_layers_to_save,real(XLAT(I,J),8),real(XLONG(I,J),8), &

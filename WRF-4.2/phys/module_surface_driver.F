@@ -1632,6 +1632,10 @@ CONTAINS
       DO i=i_start(ij),i_end(ij)
  ! check for lake model 
 #if (EM_CORE==1)
+          if (SST(i,j) .le. 0.000) then
+               SST(i,j)  = 271.4
+          endif
+
           if ( lakemodel==1) then
             if(lakemask(i,j).eq.1.) then
               if ( xice(i,j).gt.xice_threshold) then   !mchen
@@ -3169,7 +3173,7 @@ CONTAINS
 
                  ! Calculate TH2 over ice and sea (not required before fractionation but to keep it in one place)
                  TH2(I,J)     = T2(I,J)*(1.E5/PSFC(I,J))**RCP
-                 TH2_SEA(I,J) = TH2_SEA(I,J)*(1.E5/PSFC(I,J))**RCP
+                 TH2_SEA(I,J) = T2_SEA(I,J)*(1.E5/PSFC(I,J))**RCP
 
 !             ELSEIF (IVGTYP(I,J) == ISURBAN .OR. IVGTYP(I,J) == ISICE .OR. FVEGXY(I,J) == 0.0 ) THEN
               ELSEIF (IVGTYP(I,J) == ISURBAN                   .or. &
@@ -5477,6 +5481,7 @@ CONTAINS
                  CK_SEA,                                          &
                  CKA_SEA,                                         &
                  USTM_SEA,                      USTM_HOLD
+
 
 
     CALL get_local_ice_tsk( ims, ime, jms, jme, its, ite, jts, jte,  &

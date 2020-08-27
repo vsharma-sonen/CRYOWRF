@@ -330,7 +330,6 @@ CONTAINS
               qstar(i,j)=0.0
            ENDDO
         ENDIF
-
         CALL SFCLAY1D_mynn(                                        &
                 J,U1D,V1D,T1D,QV1D,P1D,dz8w1d,rho1d,               &
                 U1D2,V1D2,dz2w1d,                                  &
@@ -496,6 +495,7 @@ CONTAINS
          ! CONVERT GROUND & LOWEST LAYER TEMPERATURE TO POTENTIAL TEMPERATURE:
          ! PSFC cmb
          PSFC(I)=PSFCPA(I)/1000.
+
          THGB(I)=TSK(I)*(100./PSFC(I))**ROVCP   !(K)              
          ! PL cmb
          PL=P1D(I)/1000.                                                   
@@ -518,6 +518,8 @@ CONTAINS
       DO I=its,ite
          IF (TSK(I) .LT. 273.15) THEN
             !SATURATION VAPOR PRESSURE WRT ICE (SVP1=.6112; 10*mb)
+            !write(*,*) 'I,TSK(I):',I,TSK(I)
+            !write(*,*) 'a: ',LOG(273.15/TSK(I)) 
             E1=SVP1*EXP(4648*(1./273.15 - 1./TSK(I)) - &
             & 11.64*LOG(273.15/TSK(I)) + 0.02265*(273.15 - TSK(I)))
          ELSE
