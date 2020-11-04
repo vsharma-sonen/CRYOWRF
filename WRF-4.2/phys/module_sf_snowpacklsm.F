@@ -735,6 +735,7 @@ enddo
       ENDDO ILOOP                                                       ! of I loop
    ENDDO JLOOP                                                          ! of J loop
 
+!! HEHE HEHE TEST
 
 !!! expanding the sn_XXX arrays to have non-zero values even for points that are 'in ocean' at the moment. 
 !!! This is done so that when the downscaling is done for the nested domain, points in the high resolution coastline
