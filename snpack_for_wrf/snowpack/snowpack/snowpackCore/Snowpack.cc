@@ -1881,7 +1881,7 @@ void Snowpack::compSnowFall(const CurrentMeteo& Mdata, SnowStation& Xdata, doubl
 
 		// Now determine whether the increase in snow depth is large enough.
 		// NOTE On virtual slopes use new snow depth and density from either flat field or luv slope
-		if ((delta_cH >= height_new_elem * cos_sl) || (Xdata.hn > 0.) || add_element || (force_add_snowfall && delta_cH > Constants::eps)) {
+		if ((delta_cH >= height_new_elem * cos_sl) || (Xdata.hn > 0.) || add_element || (force_add_snowfall && delta_cH > 0.0)) {
 
 //                        std::cout << "Big check:\t" << (delta_cH >= height_new_elem * cos_sl) << " , "
 //                                                    << (Xdata.hn > 0.) << " , " 
@@ -1915,7 +1915,7 @@ void Snowpack::compSnowFall(const CurrentMeteo& Mdata, SnowStation& Xdata, doubl
 			if (nAddE < 1) {
 				// Always add snow on virtual slope (as there is no storage variable available) and some other cases
 				if (!alpine3d && ((Xdata.meta.getSlopeAngle() > Constants::min_slope_angle)
-				                      || add_element || (force_add_snowfall && delta_cH > Constants::eps))) { //no virtual slopes in Alpine3D
+				                      || add_element || (force_add_snowfall && delta_cH > 0.00))) { //no virtual slopes in Alpine3D
 					nAddE = 1;
 				} else {
 					Xdata.hn = 0.;
@@ -2054,7 +2054,7 @@ void Snowpack::compSnowFall(const CurrentMeteo& Mdata, SnowStation& Xdata, doubl
 		}
 	}
    loc_elems = Xdata.getNumberOfElements();
-   if((delta_cH > 0.0) && (delta_cH < height_new_elem)) {
+   if((delta_cH > 0.0) && (delta_cH < height_new_elem) && (loc_elems-1 > Xdata.SoilNode)) {
    Xdata.mergeElements(Xdata.Edata[loc_elems-2],Xdata.Edata[loc_elems-1],true,true);
    size_t nRemove = 1;
    Xdata.Edata[loc_elems-1] = Constants::undefined;
