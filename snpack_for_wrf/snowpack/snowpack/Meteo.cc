@@ -254,6 +254,8 @@ void Meteo::MOStability(const ATM_STABILITY& use_stability, const double& ta_v, 
 void Meteo::MicroMet(const SnowStation& Xdata, CurrentMeteo &Mdata, const bool& adjust_VW_height) const
 {
 	static const unsigned int max_iter = 100;
+        //Adapting the roughness length value depending on the presence or absence of snow
+	const double rough_len = ((Xdata.cH - Xdata.Ground) > 0.03)? roughness_length : Xdata.BareSoil_z0;
 
 	// Ideal approximation of pressure and vapor pressure
 	const double p0 = Atmosphere::stdAirPressure(Xdata.meta.position.getAltitude());
@@ -282,7 +284,7 @@ const int J = Xdata.meta.position.getGridJ();
 	// initial guess (neutral)
 	static const double eps1 = 1.e-3;
 	double psi_m = 0., psi_s = 0.;
-	const double z_ratio = log((zref - d_pump) / roughness_length);
+	const double z_ratio = log((zref - d_pump) / rough_len);
 	double ustar_old, ustar = Constants::karman * vw / (z_ratio - psi_m); //at first, psi_m=0
 	unsigned int iter = 0;
 	do {
@@ -304,14 +306,14 @@ const int J = Xdata.meta.position.getGridJ();
 		prn_msg(__FILE__, __LINE__, "wrn", Mdata.date,
 		        "Stability correction did not converge (azi=%.0lf, slope=%.0lf) --> assume neutral",
 		        Xdata.meta.getAzimuth(), Xdata.meta.getSlopeAngle());
-		Mdata.z0 = roughness_length;
+		Mdata.z0 = rough_len;
 		Mdata.ustar = Constants::karman * vw / z_ratio;
 		Mdata.psi_s = 0.;
 		return;
 	}
 
 	Mdata.ustar = ustar;
-	Mdata.z0 = roughness_length;
+	Mdata.z0 = rough_len;
 	Mdata.psi_s = psi_s;
 	Mdata.psi_m = psi_m;
 
