@@ -1076,7 +1076,7 @@ double v_check_mass = init_mass + surfFluxes.mass[SurfaceFluxes::MS_HNW]
    ALBEDO = vecXdata.Albedo;
    SNOWC  = (double) 1.0; 
    SNOW   = vecXdata.swe;
-   SNOWH  = vecXdata.cH;
+   SNOWH  = vecXdata.cH vecXdata.Ground;
    ust_wrf = Mdata.ustar;
 
    psi_s = Mdata.psi_s;
