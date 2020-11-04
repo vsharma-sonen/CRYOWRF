@@ -369,7 +369,7 @@ double SnLaws::parameterizedSnowAlbedo(const std::string& i_snow_albedo, const s
 		static const double Cdd = 0.064, Csp = -0.0736, Ctss = 0.00459, Cswout = -0.000101;
 		const double Alb1 = inter + Cage*age + Crho*Edata.Rho + Clwc*(Edata.theta[WATER]+Edata.theta[WATER_PREF])
 		+ Cdd*Edata.dd + Csp*Edata.sp + Crg*Edata.rg + Crb*Edata.rb
-		+ Cta*Ta + Ctss*Tss + Cv*Mdata.vw + Cswout*Mdata.rswr
+		+ Cta*Ta + Ctss*Tss + Cv*Mdata.vw + //Cswout*Mdata.rswr
 		+ Crh*Mdata.rh;
 		if (Alb1 > 0.) {
 			Alb = std::max(Constants::min_albedo, std::min(Constants::max_albedo, av + log(Alb1)));
