@@ -276,7 +276,13 @@ Snowpack::Snowpack(const SnowpackConfig& i_cfg)
 	std::transform(snow_erosion.begin(), snow_erosion.end(), snow_erosion.begin(), ::toupper);	// Force upper case
 
 	cfg.getValue("NEW_SNOW_GRAIN_SIZE", "SnowpackAdvanced", new_snow_grain_size);
-	new_snow_bond_size = 0.001 * new_snow_grain_size;
+
+        if(variant == "ANTARCTICA"){
+	new_snow_bond_size = 0.001 * new_snow_grain_size; }
+        else{
+          new_snow_bond_size = 0.25 * new_snow_grain_size;
+        }
+             
 
 	/* Thresholds for surface hoar formation and burial
 	 * NOTE that the value of the parameter ROUGHNESS_LENGTH in CONSTANTS_User.INI is critical for surface hoar formation,
