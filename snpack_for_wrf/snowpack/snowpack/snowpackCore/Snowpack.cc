@@ -619,7 +619,7 @@ const int J = Xdata.meta.position.getGridJ();
 			    && Xdata.Edata[Xdata.getNumberOfElements()-1].theta[ICE] > Constants::eps			// ... coexisting
 			    && Xdata.Edata[Xdata.getNumberOfElements()-1].theta[ICE] < max_ice) {
 				Bdata.qs = std::min(350., std::max(-350., Bdata.qs));
-	        			Bdata.ql = std::min(300., std::max(-300., Bdata.ql));
+	        			Bdata.ql = std::min(250., std::max(-250., Bdata.ql));
                          //            if((I==9) && (J==9)){
 //                         std::cout<<"COUNTER:\t" << Mdata.sim_counter << std::endl;
                          //   }
@@ -880,8 +880,8 @@ double Snowpack::getParameterizedAlbedo(const SnowStation& Xdata, const CurrentM
 				Albedo = Xdata.SoilAlb;
 		}
 
-		if (!alpine3d) //for Alpine3D, the radiation has been differently computed
-			Albedo = std::max(Albedo, Mdata.rswr / Constants::solcon);
+		if (!alpine3d){ //for Alpine3D, the radiation has been differently computed
+			Albedo = std::max(Albedo, Mdata.rswr / Constants::solcon);}
 
 		if (nE > Xdata.SoilNode) {
 			// For snow
@@ -1123,8 +1123,8 @@ bool Snowpack::compTemperatureProfile(const CurrentMeteo& Mdata, SnowStation& Xd
 	unsigned int iteration = 0;   // iteration counter (not really required)
 	bool NotConverged = true;     // true if iteration did not converge
 	// Set the default solution routine convergence parameters
-	unsigned int MaxItnTemp = 400; // maximum 40 iterations for temperature field
-	double ControlTemp = 0.0001;    // solution convergence to within 0.01 degC
+	unsigned int MaxItnTemp = 40; // maximum 40 iterations for temperature field
+	double ControlTemp = 0.01;    // solution convergence to within 0.01 degC
 	// Determine the displacement depth d_pump and the wind pumping speed at the surface
 	const double d_pump = SnLaws::compWindPumpingDisplacement(Xdata);
 	double v_pump = (nE > Xdata.SoilNode || SnLaws::wind_pump_soil)? SnLaws::compWindPumpingVelocity(Mdata, d_pump) : 0.0;
@@ -1446,6 +1446,9 @@ bool Snowpack::compTemperatureProfile(const CurrentMeteo& Mdata, SnowStation& Xd
 		if(variant != "SEAICE" && e==nE-1 && Xdata.Edata[e].theta[ICE]>Constants::eps)
 			NDS[e+1].T=std::min(Xdata.Edata[e].meltfreeze_tk, NDS[e+1].T);
 	}
+
+  const double emmisivity = (Xdata.getNumberOfElements() > Xdata.SoilNode) ? Constants::emissivity_snow : Xdata.SoilEmissivity;
+  const double lw_in = emmisivity * Mdata.ilwr_v ; 
 
 	return TempEqConverged;
 }
