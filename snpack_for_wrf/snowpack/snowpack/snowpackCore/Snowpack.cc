@@ -1748,8 +1748,14 @@ void Snowpack::compSnowFall(const CurrentMeteo& Mdata, SnowStation& Xdata, doubl
 	const size_t nOldE = Xdata.getNumberOfElements(); //Old number of elements
 	const double cos_sl = Xdata.cos_sl; //slope cosinus
 
-	double rho_hn = 300.0 ; // SnLaws::compNewSnowDensity(hn_density, hn_density_parameterization, hn_density_fixedValue,
-                                //               Mdata, Xdata, t_surf, variant);
+	double rho_hn ; 
+        rho_hn = SnLaws::compNewSnowDensity(hn_density, hn_density_parameterization, hn_density_fixedValue,
+                                               Mdata, Xdata, t_surf, variant);
+        
+        if (variant == "ANTARCTICA") {
+             std::cout << "I AM HERE !!!!!!!!!!!!" << std::endl;
+             rho_hn = 300.0;
+        }
 
 	if ((Sdata.cRho_hn < 0.) && (rho_hn != Constants::undefined))
 		Sdata.cRho_hn = -rho_hn;
